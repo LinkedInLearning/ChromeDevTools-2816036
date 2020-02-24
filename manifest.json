@@ -1,16 +1,19 @@
 {
-  "name": "",
-  "version": "",
+  "name": "GloScreenTags",
+  "version": "1.0",
   "description": "",
   "manifest_version": 2,
-  "devtools_page": "",
+  "devtools_page": "devtools.html",
   "icons": {
-    
+    "48": "GloScreenTags48.png"
   },
   "permissions": [
-
+    "tabs",
+    "activeTab",
+    "storage",
+    "<all_urls>"
   ],
   "web_accessible_resources": [
-    
+    "GloScreenTags48.png"
   ]
 }
