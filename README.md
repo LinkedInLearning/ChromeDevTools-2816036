@@ -17,3 +17,12 @@ Some branches will have a beginning and an end state. These are marked with the 
 	- [list of requirements for course]
 2. Clone this repository into your local machine using the terminal (Mac), CMD (Windows), or a GUI tool like SourceTree.
 3. [Course-specific instructions]
+
+## Contributing to the Repository
+1. Fork the project & clone locally.
+2. Create an upstream remote and sync your local copy before you branch.
+3. Branch for each separate piece of work.
+4. Do the work, write good commit messages, and read the CONTRIBUTING file if there is one.
+5. Push to your origin repository.
+6. Create a new PR in GitHub.
+7. Respond to any code review feedback.
