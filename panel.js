@@ -15,7 +15,13 @@ chrome.runtime.onConnect.addListener((port) => {
   const contentCont = document.getElementById('board_content');
 
   // check to see if there is a Glo Screen Comment Personal Authorization Token already saved
-
+  chrome.storage.local.get("gscPAT", (results) => {
+    if(!results.gscPAT) {
+      chrome.windows.create({url: "https://app.gitkraken.com/pats/new?name=GloScreenComments&scope=board:write"})
+    } else {
+      patToInput(results.gscPAT);
+    }
+  })
     // if it does NOT exist, open the gitkracken PAT page
     // PAT URL page: https://app.gitkraken.com/pats/new?name=GloScreenComments&scope=board:write
     // here we are pasing the name and the scope as parameters of the URL so that they automatically populate on the opening page
@@ -31,17 +37,17 @@ chrome.runtime.onConnect.addListener((port) => {
   function storePAT(e, v) {
     // here you can use an ES6 fat arrow function as a callback
     // () => {} is short hand for function() {}
-
+    chrome.storage.local.set({"gscPAT": v})
   }
 
   function removePAT() {
-
+    chrome.storage.local.remove("gscPAT");
   }
 
   function sendMessage(msg) {
     port.postMessage(msg)
   }
-  sendMessage({subject: "renderComments", message: "Test"})
+  sendMessage({subject: "renderComment", message: "Test"})
   function listenToBoardSelect(baseUrl, accessToken) {
     const boardSelect = document.getElementById('board_select');
     const contentCont = document.getElementById('board_content');
@@ -59,8 +65,12 @@ chrome.runtime.onConnect.addListener((port) => {
   }
 
   function listenForMessages(baseUrl, boardId, accessToken) {
-    // CHALLENGE 2B: Add Listener to chrome.onMessage and do two IF statements checking to see if the subject is saveComment
-
+    // CHALLENGE 2B: Add Listener to chrome.onMessage and do an IF statements checking to see if the subject is saveComment
+    chrome.runtime.onMessage.addListener((msg) => {
+      if(msg.subject === "saveComment") {
+      
+      }
+    })
       return
   }
 
@@ -70,25 +80,31 @@ chrome.runtime.onConnect.addListener((port) => {
       //  using ES6 destructuring to break out variables
       var { url, posX, posY, commentText, commentAlert } = parsedComment;
       if(parsedComment) {
-        // CHALLENGE 2E: Add a send call with subject: “renderComment” and the following resp
+        // CHALLENGE 2E: Add a sendMessage call with subject: “renderComment” and the following resp
         // resp: {card, comment: {commentId: comment.id, url, posX, posY, commentText, commentAlert}}
+        sendMessage({subject: "renderComment", resp: {card, comment: {commentId: comment.id, url, posX, posY, commentText, commentAlert}}})
       }
     } else {
-      // CHALLENGE 2E: Add a send call with subject: “renderComment” and the following resp
-      // resp: {card, comment: {posX: "10", posY: "10", commentText: {text: ""}}}
+      // CHALLENGE 2E: Add a sendMessage call with subject: “renderComment” and the following resp
+      
+      // CHALLENGE 4A: Add a postData function that creates a new comment
+      // Note: you'll need the baseURL, boardId and accessToken
+      // THEN pass in the commentID that comes back from the post to the resp.comment.commentId
+      
+      sendMessage({subject: "renderComment", resp: {card, comment: {posX: "10", posY: "10", commentText: {text: ""}}}})
     }
   }
 
-  function renderAddCommentButton(card) {
+  function renderAddCommentButton(card, baseUrl, accessToken, boardId) {
     const addCommentBtn = document.createElement('button');
     addCommentBtn.className = "btn btn-link float-right pt-0 pb-0"
     addCommentBtn.innerHTML = "+";
-    addCommentBtn.addEventListener('click', (e) => addTagToContent(card))
+    addCommentBtn.addEventListener('click', (e) => addTagToContent(card, null, baseUrl, accessToken, boardId))
     return addCommentBtn;
   }
 
-  function renderTasksCard(card) {
-    const addCommentBtn = renderAddCommentButton(card);
+  function renderTasksCard(card, baseUrl, accessToken, boardId) {
+    const addCommentBtn = renderAddCommentButton(card, baseUrl, accessToken, boardId);
     const cardDiv = document.createElement('div');
     cardDiv.className = "border row p-3";
     const nameCont = renderCardName(card);
@@ -149,19 +165,13 @@ chrome.runtime.onConnect.addListener((port) => {
       },
       body: JSON.stringify(data),
     })
-      .then((response) => {
-        if (response.ok) {
+    .then((response) => {
       // when you get back the response it's a string and you have to turn it back into JSON so that the script can read it
-          return response.json();
-        } else {
-          // Fetch promises only reject with a TypeError when a network error occurs. Since 4xx and 5xx responses aren't network errors, there's nothing to catch. You'll need to throw an error yourself to use
-          // https://stackoverflow.com/questions/38235715/fetch-reject-promise-and-catch-the-error-if-status-is-not-ok
-          throw new Error('Something went wrong');
-        }
-      })
-      .catch((error) => {
-        alert(error)
-      });
+      return response.json();
+    })
+    .catch((error) => {
+      throw error
+    });
   }
 
   function getData(url) {
@@ -172,17 +182,11 @@ chrome.runtime.onConnect.addListener((port) => {
       },
     })
     .then((response) => {
-      if (response.ok) {
-    // when you get back the response it's a string and you have to turn it back into JSON so that the script can read it
-        return response.json();
-      } else {
-        // Fetch promises only reject with a TypeError when a network error occurs. Since 4xx and 5xx responses aren't network errors, there's nothing to catch. You'll need to throw an error yourself to use
-        // https://stackoverflow.com/questions/38235715/fetch-reject-promise-and-catch-the-error-if-status-is-not-ok
-        throw new Error('Something went wrong');
-      }
+      // when you get back the response it's a string and you have to turn it back into JSON so that the script can read it
+      return response.json();
     })
     .catch((error) => {
-      alert(error)
+      throw error
     });
   }
 
