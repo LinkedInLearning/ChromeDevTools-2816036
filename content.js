@@ -1,6 +1,6 @@
 var port = chrome.runtime.connect();
 port.onMessage.addListener((msg) => {
-  if(msg.subject === "renderComments"){
+  if(msg.subject === "renderComment"){
     alert(JSON.stringify(msg));
   }
 })
@@ -50,16 +50,22 @@ function dragEnd(e) {
   const commentId = e.target.id;
   const cardId = e.target.getAttribute('data-card');
   const commentText = document.getElementById("input" + commentId).value;
+  const posX = e.clientX - 25;
+  const posY = e.clientY - 25;
+  const text = 'gloCommentTag=' + window.location.href + '?posX=' + posX + '&posY=' + posY + ' gloCommentTagsText=' + commentText;
   // CHALLENGE 2C: Add a sendMessage call with subject: “saveComment” and the following resp
-  // resp: {card: { cardId },comment:{commentId, posX: (e.clientX - 25), posY: (e.clientY - 25), commentText }}
+  sendMessage({subject: "saveComment", resp: {card: { cardId },comment:{commentId, posX, posY, commentText, text }}})
   removeTag(commentId);
 }
 
 function saveComment (msg, e) {
   const commentInput = document.getElementById("input" + msg.resp.comment.commentId);
   e.stopPropagation();
-  // CHALLENGE 2D: Add a sendMessage call with subject: “saveComment” and the following resp
-  // resp: {card: msg.resp.card, comment:{ commentId: msg.resp.comment.commentId, posX: e.clientX - 25, posY: e.clientY - 25, commentText: commentInput.value}  }
+  const posX = e.clientX - 25;
+  const posY = e.clientY - 25;
+  const text = 'gloCommentTag=' + window.location.href + '?posX=' + posX + '&posY=' + posY + ' gloCommentTagsText=' + commentInput.value;
+  // CHALLENGE 2D: Add a sendMessage call with subject: “saveComment” and the following resp 
+  sendMessage({subject: "saveComment",resp: {card: msg.resp.card, comment:{ commentId: msg.resp.comment.commentId, posX, posY, commentText: commentInput.value, text}}})
 }
 
 function removeTag(commentId) {
@@ -77,9 +83,9 @@ function closeModal(e) {
 }
 
 function sendMessage(msg) {  
-  // CHALLENGE 2A: Create a send function similar to our send function in the panel
+  // CHALLENGE 2A: Create a sendMessage function similar to our send function in the panel
   // In this case we only need the simple one-time request: https://developer.chrome.com/extensions/messaging#simple
-
+  chome.runtime.sendMessage(msg);
 }
 
 function renderCommentInput(commentText) {
