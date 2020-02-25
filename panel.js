@@ -50,7 +50,7 @@ chrome.runtime.onConnect.addListener((port) => {
   function sendMessage(msg) {
     port.postMessage(msg)
   }
-  sendMessage({subject: "renderComments", message: "Test"})
+  
   function listenToBoardSelect(baseUrl, accessToken) {
     const boardSelect = document.getElementById('board_select');
     const contentCont = document.getElementById('board_content');
@@ -62,10 +62,25 @@ chrome.runtime.onConnect.addListener((port) => {
           contentCont.innerHTML = '';
           const columns = data.columns;
           columns.forEach((column) => {
+            const col = renderColumn(column);
             // CHALLENGE 3A THEN loop through the columns and use getData to get the cards using the columnId (for help check API documentation: https://gloapi.gitkraken.com/v1/docs/)
-    
-            // CHALLENGE 3B THEN loop through the cards and use getData to get the comments
-            // then forEach comment pass the card and the comment to the addTagToContent function
+            getData(baseUrl + 'boards/' + boardId + '/columns/' + column.id + '/cards/' + accessToken)
+              // CHALLENGE 3B THEN loop through the cards and use getData to get the comments
+              // then forEach comment pass the card and the comment to the addTagToContent function
+              .then((cards) => {
+                cards.forEach((card) => {
+                  getData(baseUrl + 'boards/' + boardId + '/cards/' + card.id + '/comments' + accessToken)
+                    .then((comments) => {
+                      comments.forEach((comment) => {
+                        addTagToContent(card, comment);
+                      })
+                    })
+                    const taskCard = renderTasksCard(card, baseUrl, accessToken, boardId);
+                    col.appendChild(taskCard);
+                })
+              })
+              contentCont.appendChild(col);
+            
           })
         })
       
@@ -76,10 +91,20 @@ chrome.runtime.onConnect.addListener((port) => {
   }
 
   function listenForMessages(baseUrl, boardId, accessToken) {
-    // CHALLENGE 2B: Add Listener to chrome.onMessage and do two IF statements checking to see if the subject is saveComment
+    // CHALLENGE 2B: Add Listener to chrome.onMessage and do an IF statements checking to see if the subject is saveComment
     chrome.runtime.onMessage.addListener((msg) => {
       if(msg.subject === "saveComment") {
-
+        chrome.tabs.query({currentWindow: true, active: true}, (tabs) => {
+          const url = baseUrl + "boards/" + boardId + "/cards/" + msg.resp.card.id + "/comments/" + msg.resp.comment.commentId + accessToken;
+          const commentBody = {
+            text: "gloCommentTag=" + tabs[0].url + "?posX=" + msg.resp.comment.posX + "&posY=" + msg.resp.comment.posY + " gloCommentTagText=" + msg.resp.comment.commentText
+          }
+          postData(url, commentBody)
+            .then(() => {
+              addTagToContent(msg.resp.card, msg.resp.comment)
+            })
+        });
+        // 
       }
     })
       return
@@ -90,28 +115,34 @@ chrome.runtime.onConnect.addListener((port) => {
       const parsedComment = parseGloCommentTag(comment.text);
       //  using ES6 destructuring to break out variables
       var { url, posX, posY, commentText, commentAlert } = parsedComment;
+      
       if(parsedComment) {
-        // CHALLENGE 2E: Add a send call with subject: “renderComment” and the following resp
+        // CHALLENGE 2E: Add a sendMessage call with subject: “renderComment” and the following resp
         // resp: {card, comment: {commentId: comment.id, url, posX, posY, commentText, commentAlert}}
         sendMessage({subject: "renderComment", resp: {card, comment: {commentId: comment.id, url, posX, posY, commentText, commentAlert}}})
       }
     } else {
-      // CHALLENGE 2E: Add a send call with subject: “renderComment” and the following resp
-      // resp: {card, comment: {posX: "10", posY: "10", commentText: {text: ""}}}
-      sendMessage({subject: "renderComment", resp: {card, comment: {posX: "10", posY: "10", commentText: {text: ""}}}})
+      // CHALLENGE 2E: Add a sendMessage call with subject: “renderComment” and the following resp  
+      
+      // CHALLENGE 4A: Add a postData function that creates a new comment
+      // Note: you'll need the baseURL, boardId and accessToken
+      // THEN pass in the commentID that comes back from the post to the resp.comment.commentId
+      // const url = baseUrl + "boards/" + boardId + "/cards/" + msg.resp.card.id + "/comments/" + msg.resp.comment.commentId + accessToken;
+      
+      sendMessage({subject: "renderComment", resp: {card, comment: {posX: "10", posY: "10", commentText: {text: ""}}}});
     }
   }
 
-  function renderAddCommentButton(card) {
+  function renderAddCommentButton(card, baseUrl, accessToken, boardId) {
     const addCommentBtn = document.createElement('button');
     addCommentBtn.className = "btn btn-link float-right pt-0 pb-0"
     addCommentBtn.innerHTML = "+";
-    addCommentBtn.addEventListener('click', (e) => addTagToContent(card))
+    addCommentBtn.addEventListener('click', (e) => addTagToContent(card, null, baseUrl, accessToken, boardId))
     return addCommentBtn;
   }
 
-  function renderTasksCard(card) {
-    const addCommentBtn = renderAddCommentButton(card);
+  function renderTasksCard(card, baseUrl, accessToken, boardId) {
+    const addCommentBtn = renderAddCommentButton(card, baseUrl, accessToken, boardId);
     const cardDiv = document.createElement('div');
     cardDiv.className = "border row p-3";
     const nameCont = renderCardName(card);
@@ -172,19 +203,13 @@ chrome.runtime.onConnect.addListener((port) => {
       },
       body: JSON.stringify(data),
     })
-      .then((response) => {
-        if (response.ok) {
+    .then((response) => {
       // when you get back the response it's a string and you have to turn it back into JSON so that the script can read it
-          return response.json();
-        } else {
-          // Fetch promises only reject with a TypeError when a network error occurs. Since 4xx and 5xx responses aren't network errors, there's nothing to catch. You'll need to throw an error yourself to use
-          // https://stackoverflow.com/questions/38235715/fetch-reject-promise-and-catch-the-error-if-status-is-not-ok
-          throw new Error('Something went wrong');
-        }
-      })
-      .catch((error) => {
-        alert(error)
-      });
+      return response.json();
+    })
+    .catch((error) => {
+      throw error
+    });
   }
 
   function getData(url) {
@@ -195,22 +220,15 @@ chrome.runtime.onConnect.addListener((port) => {
       },
     })
     .then((response) => {
-      if (response.ok) {
-    // when you get back the response it's a string and you have to turn it back into JSON so that the script can read it
-        return response.json();
-      } else {
-        // Fetch promises only reject with a TypeError when a network error occurs. Since 4xx and 5xx responses aren't network errors, there's nothing to catch. You'll need to throw an error yourself to use
-        // https://stackoverflow.com/questions/38235715/fetch-reject-promise-and-catch-the-error-if-status-is-not-ok
-        throw new Error('Something went wrong');
-      }
+      // when you get back the response it's a string and you have to turn it back into JSON so that the script can read it
+      return response.json();
     })
     .catch((error) => {
-      alert(error)
+      throw error
     });
   }
 
   function parseGloCommentTag(comment) {
-    
     if (comment.substring(0, 14) === 'gloCommentTag=') {
       // gloCommentTag=https://dog.ceo/dog-api/documentation/?posX=566&posY=57&gloCommentTagText=this is a comment&gloCommentTagAlert=urgent
       const commentSplit = comment.split("gloCommentTagText=");
