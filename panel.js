@@ -39,9 +39,9 @@ chrome.runtime.onConnect.addListener((port) => {
   }
 
   function sendMessage(msg) {
-
+    port.postMessage(msg)
   }
-
+  sendMessage({subject: "renderComments", message: "Test"})
   function listenToBoardSelect(baseUrl, accessToken) {
     const boardSelect = document.getElementById('board_select');
     const contentCont = document.getElementById('board_content');

@@ -1,5 +1,9 @@
 var port = chrome.runtime.connect();
-
+port.onMessage.addListener((msg) => {
+  if(msg.subject === "renderComments"){
+    alert(JSON.stringify(msg));
+  }
+})
 function renderComment(msg) {
   const renderDiv = document.createElement('div');
   renderDiv.className = "gloComment";
@@ -46,7 +50,7 @@ function dragEnd(e) {
   const commentId = e.target.id;
   const cardId = e.target.getAttribute('data-card');
   const commentText = document.getElementById("input" + commentId).value;
-  // CHALLENGE 2C: Add a send call with subject: “saveComment” and the following resp
+  // CHALLENGE 2C: Add a sendMessage call with subject: “saveComment” and the following resp
   // resp: {card: { cardId },comment:{commentId, posX: (e.clientX - 25), posY: (e.clientY - 25), commentText }}
   removeTag(commentId);
 }
@@ -54,7 +58,7 @@ function dragEnd(e) {
 function saveComment (msg, e) {
   const commentInput = document.getElementById("input" + msg.resp.comment.commentId);
   e.stopPropagation();
-  // CHALLENGE 2D: Add a send call with subject: “saveComment” and the following resp
+  // CHALLENGE 2D: Add a sendMessage call with subject: “saveComment” and the following resp
   // resp: {card: msg.resp.card, comment:{ commentId: msg.resp.comment.commentId, posX: e.clientX - 25, posY: e.clientY - 25, commentText: commentInput.value}  }
 }
 
