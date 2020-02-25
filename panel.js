@@ -15,27 +15,36 @@ chrome.runtime.onConnect.addListener((port) => {
   const contentCont = document.getElementById('board_content');
 
   // check to see if there is a Glo Screen Comment Personal Authorization Token already saved
-
+  chrome.storage.local.get("gscPAT", (results) => {
     // if it does NOT exist, open the gitkracken PAT page
     // PAT URL page: https://app.gitkraken.com/pats/new?name=GloScreenComments&scope=board:write
     // here we are pasing the name and the scope as parameters of the URL so that they automatically populate on the opening page
     // a ? starts the parameters in a URL and the & separates multiple parameters
-
+    if(!results.gscPAT) {
       // Open the gitkraken app with scope and name fields filled in     
-
+      chrome.windows.create({url: "https://app.gitkraken.com/pats/new?name=GloScreenComments&scope=board:write"})
+    } else {
+      patToInput(results.gscPAT);
       // Access the boards
-
       // variables to concatenate urls (see: https://gloapi.gitkraken.com/v1/docs/ for more information) 
-      // const baseUrl = 'https://gloapi.gitkraken.com/v1/glo/'
+      const baseUrl = 'https://gloapi.gitkraken.com/v1/glo/';
+      const accessToken = '?access_token' + results.gscPAT;
+      getData(baseUrl + 'boards/' + accessToken)
+        .then((data) => {
+          renderBoardDropDown(data, boardSelect);
+          listenToBoardSelect(baseUrl, accessToken);
+        });
+    }
+  })
 
   function storePAT(e, v) {
     // here you can use an ES6 fat arrow function as a callback
     // () => {} is short hand for function() {}
-
+    chrome.storage.local.set({"gscPAT": v})
   }
 
   function removePAT() {
-
+    chrome.storage.local.remove("gscPAT");
   }
 
   function sendMessage(msg) {
@@ -48,19 +57,31 @@ chrome.runtime.onConnect.addListener((port) => {
     boardSelect.addEventListener('change', (e) => {
       const boardId = e.target.value;
       listenForMessages(baseUrl, boardId, accessToken);
-
+      getData(baseUrl + 'boards/' + boardId + accessToken + '&fields=columns')
+        .then((data) => {
+          contentCont.innerHTML = '';
+          const columns = data.columns;
+          columns.forEach((column) => {
+            // CHALLENGE 3A THEN loop through the columns and use getData to get the cards using the columnId (for help check API documentation: https://gloapi.gitkraken.com/v1/docs/)
+    
+            // CHALLENGE 3B THEN loop through the cards and use getData to get the comments
+            // then forEach comment pass the card and the comment to the addTagToContent function
+          })
+        })
+      
     });
 
-    // CHALLENGE 3A THEN loop through the columns and use getData to get the cards using the columnId
     
-    // CHALLENGE 3B THEN loop through the cards and use getData to get the comments
-    // then forEach comment pass the card and the comment to the addTagToContent function
 
   }
 
   function listenForMessages(baseUrl, boardId, accessToken) {
     // CHALLENGE 2B: Add Listener to chrome.onMessage and do two IF statements checking to see if the subject is saveComment
+    chrome.runtime.onMessage.addListener((msg) => {
+      if(msg.subject === "saveComment") {
 
+      }
+    })
       return
   }
 
@@ -72,10 +93,12 @@ chrome.runtime.onConnect.addListener((port) => {
       if(parsedComment) {
         // CHALLENGE 2E: Add a send call with subject: “renderComment” and the following resp
         // resp: {card, comment: {commentId: comment.id, url, posX, posY, commentText, commentAlert}}
+        sendMessage({subject: "renderComment", resp: {card, comment: {commentId: comment.id, url, posX, posY, commentText, commentAlert}}})
       }
     } else {
       // CHALLENGE 2E: Add a send call with subject: “renderComment” and the following resp
       // resp: {card, comment: {posX: "10", posY: "10", commentText: {text: ""}}}
+      sendMessage({subject: "renderComment", resp: {card, comment: {posX: "10", posY: "10", commentText: {text: ""}}}})
     }
   }
 

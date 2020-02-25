@@ -1,7 +1,7 @@
 var port = chrome.runtime.connect();
 port.onMessage.addListener((msg) => {
   if(msg.subject === "renderComments"){
-    alert(JSON.stringify(msg));
+    // alert(JSON.stringify(msg));
   }
 })
 function renderComment(msg) {
@@ -52,6 +52,7 @@ function dragEnd(e) {
   const commentText = document.getElementById("input" + commentId).value;
   // CHALLENGE 2C: Add a sendMessage call with subject: “saveComment” and the following resp
   // resp: {card: { cardId },comment:{commentId, posX: (e.clientX - 25), posY: (e.clientY - 25), commentText }}
+  sendMessage({subject: "saveMessage",resp: {card: { cardId },comment:{commentId, posX: (e.clientX - 25), posY: (e.clientY - 25), commentText }} });
   removeTag(commentId);
 }
 
@@ -60,6 +61,7 @@ function saveComment (msg, e) {
   e.stopPropagation();
   // CHALLENGE 2D: Add a sendMessage call with subject: “saveComment” and the following resp
   // resp: {card: msg.resp.card, comment:{ commentId: msg.resp.comment.commentId, posX: e.clientX - 25, posY: e.clientY - 25, commentText: commentInput.value}  }
+  sendMessage({subject: "saveMessage", resp: {card: msg.resp.card, comment:{ commentId: msg.resp.comment.commentId, posX: e.clientX - 25, posY: e.clientY - 25, commentText: commentInput.value}  }})
 }
 
 function removeTag(commentId) {
@@ -79,7 +81,7 @@ function closeModal(e) {
 function sendMessage(msg) {  
   // CHALLENGE 2A: Create a send function similar to our send function in the panel
   // In this case we only need the simple one-time request: https://developer.chrome.com/extensions/messaging#simple
-
+  chrome.runtime.sendMessage(msg);
 }
 
 function renderCommentInput(commentText) {
