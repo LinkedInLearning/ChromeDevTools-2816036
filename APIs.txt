@@ -1,9 +1,0 @@
-https://rapidapi.com/collection/best-free-apis
-https://www.programmableweb.com/apis/directory
-https://github.com/public-apis/public-apis
-https://any-api.com/
-https://apis.guru/browse-apis/
-http://apis.io/
-http://www.apiforthat.com/
-https://developers.google.com/apis-explorer/#p/
-https://apilist.fun/
